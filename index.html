@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>AHA: A Vision-Language-Model for Detecting and Reasoning Over Failures in Robotic Manipulation</title>
+    <meta name="description" content="AHA: A Vision-Language-Model for Detecting and Reasoning Over Failures in Robotic Manipulation">
+    <meta name="keywords" content="Foundation Model, Affordance Prediction">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+    <link rel="stylesheet" href="./static/css/bulma.min.css">
+    <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+    <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+    <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+    <link rel="stylesheet" href="./static/css/index.css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script defer src="./static/js/fontawesome.all.min.js"></script>
+    <script src="./static/js/bulma-carousel.min.js"></script>
+    <script src="./static/js/bulma-slider.min.js"></script>
+    <script src="./static/js/index.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    <script>
+        function init() {
+            const video = document.getElementById("simulation-menu-video");
+            video.addEventListener("error", () => {
+                console.log("Error loading video: ", video.src), ". Setting default to none";
+                if(video.src.includes("undefined")) {
+                    console.log("Don't have an undefined version of the clip, just crash");
+                    return;
+                }
+                const task = document.getElementById("simulation-menu-task-name").value;
+                const uri = `static/videos/simulation/undefined.mp4`
+                video.src = uri;
+                video.playbackRate = 1.75;
+                video.play();
+            }, true);
+        }
+
+        function updateFailureModeVideo() {
+            const task = document.getElementById("simulation-menu-task-name").value;
+            const failure = document.getElementById("simulation-menu-failure-mode").value;
+            const video = document.getElementById("simulation-menu-video");
+            const uri = `static/videos/simulation/${task}/vid_${task}_${failure}.mp4`;
+            video.src = uri;
+            video.playbackRate = 1.75;
+            video.play();
+        }
+
+        timeoutIds = [];
+
+        function populateDemo(imgs, num, show_alt = true) {
+            // Get the expanded image
+            var expandImg = document.getElementById("expandedImg-" + num);
+            // Get the image text
+            var imgText = document.getElementById("imgtext-" + num);
+            var answer = document.getElementById("answer-" + num);
+
+            // Use the same src in the expanded image as the image being clicked on from the grid
+            expandImg.src = imgs.src.replace(".png", ".mp4");
+            var video = document.getElementById('demo-video-' + num);
+            // or video = $('.video-selector')[0];
+            video.pause()
+            video.load();
+            video.play();
+            video.removeAttribute('controls');
+
+            if (show_alt) {
+                console.log(expandImg.src);
+
+                imgText.style.display = "block";
+                answer.style.display = "block";
+                // Use the value of the alt attribute of the clickable image as text inside the expanded image
+                var qa = imgs.alt.split("[sep]");
+                imgText.innerHTML = qa[0];
+                answer.innerHTML = "";
+                // Show the container element (hidden with CSS)
+                expandImg.parentElement.style.display = "block";
+                for (timeoutId of timeoutIds) {
+                    clearTimeout(timeoutId);
+                }
+
+                // NOTE (wliang): Modified from original to read from file instead
+                fetch(qa[1])
+                    .then(response => response.text())
+                    .then(contents => {
+                        // Call the processData function and pass the contents as an argument
+                        typeWriter(contents, 0, qa[0], num);
+                    })
+                    .catch(error => console.error('Error reading file:', error));
+            }
+            else {
+                imgText.style.display = "none";
+                answer.style.display = "none";
+            }
+        }
+
+        function typeWriter(txt, i, q, num) {
+            var imgText = document.getElementById("imgtext-" + num);
+            var answer = document.getElementById("answer-" + num);
+            if (imgText.innerHTML == q) {
+                for (let k = 0; k < 5; k++) {
+                    if (i < txt.length) {
+                        if (txt.charAt(i) == "\\") {
+                            answer.innerHTML += "\n";
+                            i += 1;
+                        } else {
+                            answer.innerHTML += txt.charAt(i);
+                        }
+                        i++;
+                    }
+                }
+                hljs.highlightAll();
+                timeoutIds.push(setTimeout(typeWriter, 1, txt, i, q, num));
+            }
+        }
+    </script>
+
+</head>
+
+<body onload="init(); updateFailureModeVideo();">
+    <!-- Title / Authors Info -->
+    <section class="hero">
+        <div class="hero-body">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered">
+                    <div class="column has-text-centered">
+                        <h1 class="title is-1 publication-title">
+                        <img src="static/images/emoji.png" alt="Emoji" style="width: 45px; height: 45px; vertical-align: middle;">
+                            AHA: <br> A Vision-Language-Model for Detecting and Reasoning over Failures in Robotic Manipulation
+                        </h1>
+                        <div class="is-size-5 publication-authors">
+                            <span class="author-block">
+                                <a target="_blank" href="https://duanjiafei.com/">Jiafei Duan</a><sup>1,5</sup>,
+                            </span>
+                            <span class="author-block">
+                                <a target="_blank" href="https://wpumacay.github.io/">Wilbert Pumacay</a><sup>2</sup>
+                            </span>
+                            <span class="author-block">
+                                <a target="_blank" href="http://nishanthjkumar.com/">Nishanth Kumar</a><sup>3</sup>
+                            </span>
+                            <span class="author-block">
+                                <a target="_blank" href="https://helen9975.github.io/">Yi Ru Wang</a><sup>1</sup>
+                            </span>
+                            <span class="author-block">
+                                <a target="_blank" href="https://shulin16.github.io/">Shulin Tian</a><sup>4</sup>,
+                            </span>
+                            <span class="author-block">
+                                <a target="_blank" href="https://wentaoyuan.github.io/">Wentao Yuan</a><sup>1, 5</sup>,
+                            </span>
+                            <span class="author-block">
+                                <a target="_blank" href="https://ranjaykrishna.com/index.html/">Ranjay Krishna</a><sup>1, 6</sup>
+                            </span>
+                            <span class="author-block">
+                                <a target="_blank" href="https://homes.cs.washington.edu/~fox/">Dieter Fox</a><sup>1, 5</sup>
+                            </span>
+                            <span class="author-block">
+                                <a target="_blank" href="https://ai.stanford.edu/~amandlek/">Ajay Mandlekar*</a><sup>5</sup>
+                            </span>
+                            <span class="author-block">
+                                <a target="_blank" href="https://scholar.google.com/citations?user=ONuIPv0AAAAJ&hl=zh-CN">Yijie Guo*</a><sup>5</sup>
+                            </span>
+                        </div>
+                        <div class="is-size-5 publication-authors">
+                            <span class="author-block"><sup>1</sup>University of Washington</span>
+                            <span class="author-block"><sup>2</sup>Universidad Católica San Pablo</span>
+                            <span class="author-block"><sup>3</sup>MIT</span>
+                            <br>
+                            <span class="author-block"><sup>4</sup>Nanyang Technological University</span>
+                            <span class="author-block"><sup>5</sup>NVIDIA</span>
+                            <br>
+                            <span class="author-block"><sup>6</sup>Allen Institute for Artifical Intelligence</span>
+                        </div>
+                        <div class="column has-text-centered">
+                            <!-- ArXiv link -->
+                            <span class="link-block">
+                                <a target="_blank" href="Aha_paper.pdf" class="external-link button is-normal is-rounded is-dark">
+                                    <span class="icon"><i class="fas fa-file"></i></span>
+                                    <span>Paper</span>
+                                </a>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+     
+
+    <section class="section">
+        <div class="container is-max-desktop">
+            <!-- Video Teaser -->
+            <video id="teaser" autoplay muted loop height="100">
+                <source src="static/videos/vid_intro_teaser.mp4" type="video/mp4">
+            </video>
+            <!-- /Video Teaser -->
+            <br/>
+            <br/>
+            <!-- Abstract. -->
+            <div class="columns is-centered has-text-centered">
+                <div class="column is-four-fifths">
+                    <h2 class="title is-3">Abstract</h2>
+                    <div class="content has-text-justified">
+                        <p>
+                            Robotic manipulation in open-world settings demands not only the execution of tasks but also
+                            the ability to detect and learn from failures during execution. While recent advances in
+                            vision-language models (VLMs) and large language models (LLMs) have enhanced robots' spatial
+                            reasoning and problem-solving capabilities, these models often struggle to recognize and
+                            reason about failures, limiting their effectiveness in real-world applications. In this paper,
+                            we introduce Aha, an open-source VLM specifically designed to detect and reason about failures
+                            in robotic manipulation through natural language. By framing failure detection as a free-form
+                            reasoning task, Aha identifies failures and generates detailed explanations adaptable across
+                            various robots, tasks, and environments in both simulation and real-world scenarios. To fine-tune
+                            Aha, we developed FailGen, a scalable simulation framework that procedurally generates
+                            the Aha Dataset — the first large-scale dataset of robotic failure trajectories—by perturbing
+                            successful demonstrations from the RLBench simulator. Despite being trained solely on the Aha Dataset,
+                            Aha generalizes effectively to real-world failure datasets, different robotic systems, and
+                            unseen tasks. It surpasses the second-best model by 10.3% and exceeds the average performance
+                            of all six compared models—including five state-of-the-art VLMs and one model employing in-context
+                            learning—by 35.3% across multiple metrics and datasets. Moreover, we integrate Aha into three
+                            VLM/LLM-assisted manipulation frameworks. Its natural language failure feedback enhances error recovery
+                            and policy performance through methods such as improving reward functions with Eureka reflection,
+                            optimizing task and motion planning, and verifying sub-task success in zero-shot robotic manipulation.
+                            Our approach achieves an average task success rate 21.4% higher than GPT-4 models. Our contributions
+                            are threefold: (1) developing FailGen and curating the Aha Dataset, enabling scalable
+                            procedural generation of failure demonstrations; (2) instruction-tuning Aha for advanced failure
+                            reasoning in manipulation tasks, outperforming existing models; and (3) integrating Aha into
+                            downstream robotic systems, demonstrating improved error correction and policy performance. 
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <!--/ Abstract. -->
+        </div>
+    </section>
+
+   <section class="section">
+    <div class="container is-max-widescreen">
+        <!-- Experiments. -->
+        <div class="columns is-centered has-text-centered">
+            <div class="column">
+                <h2 class="title is-3">Overview of AHA</h2>
+                <img src="static/images/overview_aha.png" style="max-width: 70%; height: auto;" />
+                <p class="caption">
+                    The data generation for AHA is accomplished by
+                    taking a normal task trajectory in simulation and procedurally perturbing all keyframes using our
+                    taxonomy of failure modes. Through FailGen, we systematically alter keyframes to synthesize
+                    failure demonstrations conditioned on the original tasks. Simultaneously, we generate corresponding
+                    query and answer prompts for each task and failure mode, which are used for instruction-tuning.
+                    (Bottom) The instruction-tuning pipeline follows the same fine-tuning procedure as LLaVA-v1.5, where we fine-tune only the LLM base model—in this case, LLaMA-2-13B and the
+                    projection linear layers, while freezing the rest of the model.
+                </p>
+            </div>
+        </div>
+        <!--/ Experiments. -->
+    </div>
+</section>
+
+
+    <!-- Failure videos per task -->
+            <section class="section">
+            <div class="container is-max-widescreen">
+                <div class="columns is-centered">
+                    <div class="column is-full has-text-centered">
+                        <h2 class="title is-3">Procedural Generation of Instruction-tuning Dataset in Simulation (Aha dataset)</h2>
+                        <div class="columns">
+                            <div class="column has-text-centered">
+                                Task
+                                <div class="select is-small">
+                                    <select id="simulation-menu-task-name" onchange="updateFailureModeVideo()">
+                                        <option value="basketball_in_hoop" selected="selected">basketball</option>
+                                        <option value="beat_the_buzz">beat the buzz</option>
+                                        <option value="change_channel">change channel</option>
+                                        <option value="close_box">close box</option>
+                                        <option value="close_door">close door</option>
+                                        <option value="close_drawer">close drawer</option>
+                                        <option value="close_fridge">close fridge</option>
+                                        <option value="close_grill">close grill</option>
+                                        <option value="close_jar">close jar</option>
+                                        <option value="close_laptop_lid">close laptop</option>
+                                        <option value="close_jar">close microwave</option>
+                                        <option value="get_ice_from_fridge">get ice from fridge</option>
+                                        <option value="hang_frame_on_hanger">hang frame</option>
+                                        <option value="hit_ball_with_queue">hit ball</option>
+                                        <option value="hockey">hockey</option>
+                                        <option value="insert_onto_square_peg">insert peg</option>
+                                        <option value="insert_usb_in_computer">insert usb</option>
+                                        <option value="lamp_off">lamp off</option>
+                                        <option value="lamp_on">lamp on</option>
+                                        <option value="lift_numbered_block">lift block</option>
+                                        <option value="light_bulb_in">lightbulb in</option>
+                                        <option value="light_bulb_out">lightbulb out</option>
+                                        <option value="meat_on_grill">meat on grill</option>
+                                        <option value="move_hanger">move hanger</option>
+                                        <option value="open_door">open door</option>
+                                        <option value="open_drawer">open drawer</option>
+                                        <option value="open_jar">open_jar</option>
+                                        <option value="open_microwave">open microwave</option>
+                                        <option value="open_oven">open oven</option>
+                                        <option value="open_washing_machine">open washing machine</option>
+                                        <option value="open_window">open window</option>
+                                        <option value="open_wine_bottle">open wine bottle</option>
+                                        <option value="phone_on_base">phone on base</option>
+                                        <option value="pick_and_lift_small">pick and lift small</option>
+                                        <option value="pick_and_lift">pick and lift</option>
+                                        <option value="pick_up_cup">pick up cup</option>
+                                        <option value="place_cups">place cups</option>
+                                        <option value="place_hanger_on_rack">place hanger on rack</option>
+                                        <option value="place_shape_in_shape_sorter">place shape in shape sorter</option>
+                                        <option value="play_jenga">play jenga</option>
+                                        <option value="plug_charger_in_power_supply">plug charger in power supply</option>
+                                        <option value="pour_from_cup_to_cup">pour from cup to cup</option>
+                                        <option value="press_switch">press switch</option>
+                                        <option value="push_buttons">push buttons</option>
+                                        <option value="push_button">push button</option>
+                                        <option value="put_bottle_in_fridge">put bottle in fridge</option>
+                                        <option value="put_groceries_in_cupboard">put groceries in cupboard</option>
+                                        <option value="put_item_in_drawer">put item in drawer</option>
+                                        <option value="put_knife_in_knife_block">put knife in knife block</option>
+                                        <option value="put_knife_on_chopping_board">put knife on chopping board</option>
+                                        <option value="put_money_in_safe">put money in safe</option>
+                                        <option value="put_toilet_roll_on_stand">put toilet roll on stand</option>
+                                        <option value="reach_and_drag">reach and drag</option>
+                                        <option value="remove_cups">remove cups</option>
+                                        <option value="scoop_with_spatula">scoop with spatula</option>
+                                        <option value="screw_nail">screw nail</option>
+                                        <option value="setup_checkers">setup checkers</option>
+                                        <option value="setup_chess">setup chess</option>
+                                        <option value="slide_block_to_target">slide block to target</option>
+                                        <option value="solve_puzzle">solve puzzle</option>
+                                        <option value="stack_blocks">stack blocks</option>
+                                        <option value="stack_chairs">stack chairs</option>
+                                        <option value="stack_cups">stack cups</option>
+                                        <option value="stack_wine">stack wine</option>
+                                        <option value="straighten_rope">straighten rope</option>
+                                        <option value="sweep_to_dustpan">sweep to dustpan</option>
+                                        <option value="take_cup_out_from_cabinet">take cup out from cabinet</option>
+
+                                    </select>
+                                </div>
+                                and failure mode
+                                <div class="select is-small">
+                                    <select id="simulation-menu-failure-mode" onchange="updateFailureModeVideo()">
+                                        <option value="grasp" selected="selected">Grasp</option>
+                                        <option value="slip">Slip</option>
+                                        <option value="translation_x">Translation X</option>
+                                        <option value="translation_y">Translation Y</option>
+                                        <option value="translation_z">Translation Z</option>
+                                        <option value="rotation_x">Rotation X</option>
+                                        <option value="rotation_y">Rotation Y</option>
+                                        <option value="rotation_z">Rotation Z</option>
+                                        <option value="no_rotation">No Rotation</option>
+                                        <option value="wrong_sequence">Wrong Sequence</option>
+                                        <!--<option value="wrong_object">Wrong Object</option>-->
+                                    </select>
+                                </div>
+                                <br>
+                                <br>
+                                <video id="simulation-menu-video" muted autoplay loop>
+                                    <source src="static/videos/simulation/basketball_in_hoop/vid_basketball_in_hoop_grasp.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <section class="section">
+        <div class="container is-max-widescreen">
+            <!-- Experiments. -->
+            <div class="columns is-centered has-text-centered">
+                <div class="column">
+                    <h2 class="title is-3">Experiments</h2>
+                    <p class="caption">
+                        <strong>AHA-13B Outperforms 6 SoTA VLMs in Failure reasoning for robotic manipulation Across 3 diverse datasets and 4 evaluation metrics.</strong>
+                    </p>
+                    <img src="static/images/r1.png" style="max-width: 70%; height: auto;" />
+                </div>
+            </div>
+            <!--/ Experiments. -->
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container is-max-widescreen">
+            <!-- Experiments. -->
+            <div class="columns is-centered has-text-centered">
+                <div class="column">
+                    <h2 class="title is-3">Example failure reasoning from VLMs </h2>
+                    <p class="caption">
+                         <strong>AHA generalizes failure reasoning <span style="color: #ff6347;">across embodiments</span>, <span style="color: #4682b4;">unseen domains</span>, and <span style="color: #32cd32;">novel tasks</span>.</strong>
+                    </p>
+                    <img src="static/images/r2.png" style="max-width: 70%; height: auto;" />
+                </div>
+            </div>
+            <!--/ Experiments. -->
+        </div>
+    </section>
+    <section class="section">
+        <div class="container is-max-widescreen">
+            <!-- Experiments. -->
+            <div class="columns is-centered has-text-centered">
+                <div class="column">
+                    <h2 class="title is-3">Example failure reasoning from VLMs </h2>
+                    <p class="caption">
+                       <strong>AHA scales in performance with data</strong>
+                    </p>
+                    <img src="static/images/r3.png" style="max-width: 70%; height: auto;" />
+                </div>
+            </div>
+            <!--/ Experiments. -->
+        </div>
+    </section>
+
+       <section class="hero is-light is-small">
+        <div class="hero-body">
+            <div class="container">
+                <h2 class="title is-3">Evaluation Dataset</h2>
+                <div class="column has-text-centered">
+                    <h3 class="title is-5">Maniskill-Fail Dataset</h3>
+                </div>
+                <div id="results-carousel" class="carousel results-carousel">
+                    <div class="item item-steve">
+                        <video id="steve" autoplay muted loop>
+                            <source src="static/videos/datasets/failgen_maniskill/fail_pick_cube_0.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-fullbody">
+                        <video id="fullbody" autoplay muted loop>
+                            <source src="static/videos/datasets/failgen_maniskill/fail_pick_cube_1.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-shiba">
+                        <video id="shiba" autoplay muted loop>
+                            <source src="static/videos/datasets/failgen_maniskill/fail_plug_charger_0.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-ender">
+                        <video id="ender" autoplay muted loop>
+                            <source src="static/videos/datasets/failgen_maniskill/fail_push_cube_0.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-pokemon">
+                        <video id="pokemon" autoplay muted loop>
+                            <source src="static/videos/datasets/failgen_maniskill/fail_push_cube_1.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-chansey">
+                        <video id="chansey" autoplay muted loop>
+                            <source src="static/videos/datasets/failgen_maniskill/fail_stack_cube_0.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-pikachu">
+                        <video id="pikachu" autoplay muted loop>
+                            <source src="static/videos/datasets/failgen_maniskill/fail_stack_cube_1.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
+                <br>
+                <br>
+                <div class="column has-text-centered">
+                    <h3 class="title is-5">Aha dataset (Test)</h3>
+                </div>
+                <div id="results-carousel" class="carousel results-carousel">
+                    <div class="item item-patrick">
+                        <video id="patrick" autoplay muted loop>
+                            <source src="static/videos/datasets/robofail_test/vid_hockey_no_rotation_scaled.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-fullcuerpo">
+                        <video id="fullcuerpo" autoplay muted loop>
+                            <source src="static/videos/datasets/robofail_test/vid_lamp_off_rotation_x_scaled.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-shibar">
+                        <video id="shibar" autoplay muted loop>
+                            <source src="static/videos/datasets/robofail_test/vid_open_oven_translation_y_scaled.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-enderman">
+                        <video id="enderman" autoplay muted loop>
+                            <source src="static/videos/datasets/robofail_test/vid_place_hanger_on_rack_wrong_sequence_scaled.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-digimon">
+                        <video id="digimon" autoplay muted loop>
+                            <source src="static/videos/datasets/robofail_test/vid_stack_chairs_slip_scaled.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- /Datasets -->
+
+    <!-- Real World -->
+    <section class="hero is-light is-small">
+        <div class="hero-body">
+            <div class="container">
+                 <div class="column has-text-centered">
+                    <h3 class="title is-5">REFLECT Dataset</h3>
+                </div>
+                <div id="results-carousel" class="carousel results-carousel">
+                    <div class="item item-steve">
+                        <video id="steve" autoplay muted loop>
+                            <source src="static/videos/real_world/real_world_0_scaled.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-fullbody">
+                        <video id="fullbody" autoplay muted loop>
+                            <source src="static/videos/real_world/real_world_1_scaled.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-shiba">
+                        <video id="shiba" autoplay muted loop>
+                            <source src="static/videos/real_world/real_world_2_scaled.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-ender">
+                        <video id="ender" autoplay muted loop>
+                            <source src="static/videos/real_world/real_world_3_scaled.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="item item-pokemon">
+                        <video id="pokemon" autoplay muted loop>
+                            <source src="static/videos/real_world/real_world_4_scaled.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container is-max-widescreen">
+            <div class="rows">
+                <div class="rows is-centered ">
+                    <div class="row is-full-width">
+                        <h2 class="title is-3"><span class="dvima">AHA Downstream Robotic Application</span></h2>
+                    </div>
+                </div>
+            </div>
+            <br>
+            <div class="columns" style="align-items: end;">
+                <div class="column is-half">
+                    <p style="font-size: 1.5em"><b>VLM Reward Function Generation (Eureka)</b></p>
+                    <div class="col-md-4 col-sm-4 col-xs-4">
+                        <img src="static/videos/maniskill/task1.png" width="18%" style="border-radius: 5px;" alt='<b>Task: Pick up the mustard bottle</b>, AHA Improved Reward Function:
+                        [sep]
+                        static/txt/reward_functions/maniskill/task1.txt' onclick="populateDemo(this, 1);">
+
+                        <img src="static/videos/maniskill/task2.png" width="18%" style="border-radius: 5px;" alt='<b>Task: Push T to shaped T area</b>, AHA Improved Reward Function:
+                        [sep]
+                        static/txt/reward_functions/maniskill/task2.txt' onclick="populateDemo(this, 1);">
+
+                        <img src="static/videos/maniskill/task3.png" width="18%" style="border-radius: 5px;" alt='<b>Task: Put sphere into sphere holder</b>, AHA Improved Reward Function:
+                        [sep]
+                        static/txt/reward_functions/maniskill/task3.txt' onclick="populateDemo(this, 1);">
+
+                        <img src="static/videos/maniskill/task4.png" width="18%" style="border-radius: 5px;" alt='<b>Task: Stack the red cube onto the green cube</b>, AHA Improved Reward Function:
+                        [sep]
+                        static/txt/reward_functions/maniskill/task4.txt' onclick="populateDemo(this, 1);">
+
+                        <img src="static/videos/maniskill/task5.png" width="18%" style="border-radius: 5px;" alt='<b>Task: Open the drawer</b>, AHA Improved Reward Function:
+                        [sep]
+                        static/txt/reward_functions/maniskill/task5.txt' onclick="populateDemo(this, 1);">
+                    </div>
+
+                    <br>
+                    <p style="font-size: 1.5em"><b>VLM Task-plan Generation (PRoC3S)</b></p>
+                    <div class="col-md-4 col-sm-4 col-xs-4">
+                        <img src="static/videos/tamp/t1.png" width="18%" style="border-radius: 5px;" alt='<b>Task: Stack banana onto spam can</b>, AHA Improved Task-plan:
+                        [sep]
+                        static/txt/reward_functions/tamp/t1.txt' onclick="populateDemo(this, 1);">
+
+                        <img src="static/videos/tamp/t2.png" width="18%" style="border-radius: 5px;" alt='<b>Task: Stack two cubes inside a bowl</b>, AHA Improved Task-plan:
+                        [sep]
+                        static/txt/reward_functions/tamp/t2.txt' onclick="populateDemo(this, 1);">
+
+                        <img src="static/videos/tamp/t3.png" width="18%" style="border-radius: 5px;" alt='<b>Task: Move the banana to the centre</b>, AHA Improved Task-plan:
+                        [sep]
+                        static/txt/reward_functions/tamp/t3.txt' onclick="populateDemo(this, 1);">
+                    </div>
+
+                    <br>
+                    <p style="font-size: 1.5em"><b>VLM Sub-task Verification (Manipulate Anything)</b></p>
+                    <div class="col-md-4 col-sm-4 col-xs-4">
+                        <img src="static/videos/ma/pick_and_lift.png" width="18%" style="border-radius: 5px;" onclick="populateDemo(this, 1, false);">
+                        <img src="static/videos/ma/pick_up_cup.png" width="18%" style="border-radius: 5px;" onclick="populateDemo(this, 1, false);">
+                        <img src="static/videos/ma/put_block.png" width="18%" style="border-radius: 5px;" onclick="populateDemo(this, 1, false);">
+                        <img src="static/videos/ma/sort_mustard.png" width="18%" style="border-radius: 5px;" onclick="populateDemo(this, 1, false);">
+                    </div>
+                </div>
+                <div class="row border rounded" style="padding-top:12px; padding-bottom:12px;">
+                    <div class="col-md-6">
+                        <video id="demo-video-1" style="border-radius: 5px;" autoplay loop muted webkit-playsinline
+                            playsinline onclick="setAttribute('controls', 'true');">
+                            <source id="expandedImg-1" src="static/videos/placeholder.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div id="imgtext-1" style="font-size: 1.5em">Select an image above:</div>
+                <div>
+                    <pre
+                        class="p-1"><code class="language-python" id="answer-1">AHA improved VLM/LLM generation shown within code block.</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container is-max-widescreen">
+            <div class="rows">
+                <div class="rows is-centered ">
+                    <div class="row is-full-width">
+                        <h2 class="title is-3"><span class="dvima">Accelerate Eureka Reward Searching via AHA failure feedback</span></h2>
+                    </div>
+                </div>
+            </div>
+            <br>
+            <div class="columns" style="align-items: end;">
+                <div class="column is-half">
+                    <div class="col-md-4 col-sm-4 col-xs-4">
+                        <img src="static/videos/iterations/iteration-0.png" width="40%" style="border-radius: 5px;" alt='<b>Iteration 1</b>, Iteration 1 (Before AHA):
+                        [sep]
+                        static/txt/reward_functions/iteration-0.txt' onclick="populateDemo(this, 2);">
+
+                        <img src="static/videos/iterations/iteration-1.png" width="40%" style="border-radius: 5px;" alt='<b>Iteration 2</b>, Iteration 2 (After AHA):
+                        [sep]
+                        static/txt/reward_functions/iteration-1.txt' onclick="populateDemo(this, 2);">
+
+                    </div>
+                </div>
+                <div class="row border rounded" style="padding-top:12px; padding-bottom:12px;">
+                    <div class="col-md-6">
+                        <video id="demo-video-2" style="border-radius: 5px;" autoplay loop muted webkit-playsinline
+                            playsinline onclick="setAttribute('controls', 'true');">
+                            <source id="expandedImg-2" src="static/videos/placeholder.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div id="imgtext-2" style="font-size: 1.5em">Select an image above:</div>
+                <div>
+                    <pre
+                        class="p-1"><code class="language-python" id="answer-2">Generated response shown within code block.</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <!-- Datasets -->
+ 
+    <!-- /Real World -->
+
+</body>
+</html>
